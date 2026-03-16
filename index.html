@@ -1,1 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PsyLume – Illuminating mental wellbeing</title>
 
+  <style>
+    /* ============================================================
+       CSS CUSTOM PROPERTIES (Design Tokens)
+       These variables define the app's color palette and shadow,
+       making it easy to restyle from one place.
+    ============================================================ */
+    :root {
+      --bg:     honeydew;          /* Page background – soft green-white */
+      --card:   white;             /* Card/panel background */
+      --text:   darkslategray;     /* Primary text color */
+      --muted:  darkcyan;          /* Secondary / subdued text */
+      --brand:  teal;              /* Primary brand / interactive color */
+      --good:   forestgreen;       /* Positive / "doing well" indicator */
+      --warn:   goldenrod;         /* Warning / mild concern indicator */
+      --high:   mediumvioletred;   /* High-concern indicator */
+      --crit:   firebrick;         /* Critical / urgent indicator */
+      --shadow: 0 10px 25px rgba(0, 0, 0, 0.08); /* Soft card drop-shadow */
+    }
+
+    /* ============================================================
+       RESET & BASE
+    ============================================================ */
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    /* ============================================================
+       LAYOUT WRAPPER
+       Centers content and adds horizontal padding on small screens.
+    ============================================================ */
+    .wrap {
+      max-width: 880px;
+      margin: 32px auto;
+      padding: 16px;
+    }
+
+    /* ============================================================
+       CARD COMPONENT
+       White rounded panel used for landing, quiz, and results views.
+    ============================================================ */
+    .card {
+      background: var(--card);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      padding: 20px;
+    }
+
+    /* Fluid heading that scales between 22px and 32px */
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(22px, 4vw, 32px);
+    }
+
+    /* Subdued lead / subtitle paragraph */
+    p.lead {
+      margin: 8px 0 16px;
+      color: var(--muted);
+    }
+
+    /* Horizontal flex row used throughout for button groups etc. */
+    .row {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    /* ============================================================
+       BUTTON VARIANTS
+       .btn        → solid brand-colored primary button
+       .btn.secondary → neutral gray button (e.g. "Back")
+       .btn.ghost  → outlined / transparent button
+       :disabled   → dims and disables pointer events
+    ============================================================ */
+    .btn {
+      appearance: none;
+      border: 0;
+      background: var(--brand);
+      color: white;
+      padding: 12px 16px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .btn.secondary {
+      background: lightgray;
+      color: black;
+    }
+    .btn.ghost {
+      background: transparent;
+      border: 2px solid var(--brand);
+      color: var(--brand);
+    }
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    /* ============================================================
+       PROGRESS BAR
+       Outer track (light mint) + inner fill (brand color).
+    ============================================================ */
+    .bar {
+      height: 8px;
+      background: mintcream;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .bar > span {
+      display: block;
+      height: 100%;
+      background: var(--brand);
+      width: 0; /* Updated dynamically via JS */
+    }
+
+    /* ============================================================
+       QUESTION BLOCK
+       Each question lives in a bordered card with a radio-button grid.
+    ============================================================ */
+    .q {
+      padding: 16px;
+      border: 1px solid lavender;
+      border-radius: 12px;
+      margin-bottom: 14px;
+    }
+    .q h3 {
+      margin: 0 0 10px;
+      font-size: 16px;
+    }
+
+    /* Auto-fit grid so options wrap nicely on small screens */
+    .opts {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 8px;
+    }
+
+    /* Individual radio option pill */
+    .opt {
+      border: 1px solid lightgray;
+      border-radius: 10px;
+      padding: 10px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .opt input { margin-right: 8px; }
+
+    /* Section divider label (not currently used in markup but available) */
+    .sectionTitle {
+      margin: 24px 0 8px;
+      font-weight: 700;
+      color: var(--muted);
+    }
+
+    /* ============================================================
+       RESULTS VIEW – hide until scoring is complete
+    ============================================================ */
+    .result { display: none; }
+
+    /* Colored pill badges shown next to score / category labels */
+    .scoreBadge {
+      display: inline-block;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-weight: 700;
+    }
+    .scoreBadge.good { background: palegreen;  color: darkgreen; }
+    .scoreBadge.mild { background: peachpuff;  color: saddlebrown; }
+    .scoreBadge.mod  { background: moccasin;   color: saddlebrown; }
+    .scoreBadge.high { background: mistyrose;  color: mediumvioletred; }
+    .scoreBadge.crit { background: lightcoral; color: darkred; }
+
+    /* ============================================================
+       IMMEDIATE HELP MODAL
+       Full-screen overlay with a centered help box.
+    ============================================================ */
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.4);
+      display: none; /* Toggled open by JS */
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .modal .box {
+      background: white;
+      border-radius: 16px;
+      max-width: 720px;
+      width: 100%;
+      padding: 20px;
+      box-shadow: var(--shadow);
+    }
+
+    /* Stacked list of helpline cards */
+    .helpList  { display: grid; gap: 10px; }
+    .helpItem  { padding: 12px; border: 1px solid lavender; border-radius: 12px; }
+    .helpNumber{ font-weight: 700; }
+
+    /* ============================================================
+       FOOTER NOTE
+       Small muted disclaimer text used at the bottom of sections.
+    ============================================================ */
+    .foot {
+      margin-top: 16px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    a { color: var(--brand); }
+
+    /* ============================================================
+       FADE-IN ANIMATION
+       Applied to cards when they become visible.
+       Respects user's reduced-motion preference.
+    ============================================================ */
+    @media (prefers-reduced-motion: no-preference) {
+      .fade { animation: fade 0.35s ease both; }
+      @keyframes fade {
+        from { opacity: 0; transform: translateY(6px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+
+    <!-- ============================================================
+         LANDING VIEW
+         Shown on first load. Lets the user start the quiz or open
+         the Immediate Help modal.
+    ============================================================ -->
+    <div class="card fade" id="landing">
+      <h1>💡 PsyLume</h1>
+      <p><em>Illuminating Mental Wellbeing</em></p>
+      <p class="lead">
+        This short, private mental health check‑in helps you reflect across stress, anxiety, mood, and daily functioning.
+        It is <strong>not a diagnosis</strong>. If you're in immediate danger, use <strong>Immediate Help</strong>.
+      </p>
+      <div class="row">
+        <button class="btn"  id="startBtn">Start the quiz</button>
+        <button class="btn ghost" id="helpBtn1">Immediate Help</button>
+      </div>
+      <div class="foot">Data stays on your device. No sign‑in. You can close this tab anytime.</div>
+    </div>
+
+    <!-- ============================================================
+         QUIZ VIEW
+         Hidden initially; revealed when user clicks "Start the quiz".
+         Contains progress bar, all question blocks, and nav buttons.
+    ============================================================ -->
+    <div class="card fade" id="quiz" style="display:none">
+
+      <!-- Progress indicator row -->
+      <div class="row" style="justify-content:space-between; gap:8px">
+        <div style="font-weight:700">Progress</div>
+        <div style="min-width:120px; text-align:right"><span id="progText">0/25</span></div>
+      </div>
+      <div class="bar" aria-hidden="true"><span id="progBar"></span></div>
+
+      <!-- Question blocks injected here by JS -->
+      <div id="questions"></div>
+
+      <!-- Bottom navigation: Back | Immediate Help | See my results -->
+      <div class="row" style="justify-content:space-between; margin-top:12px">
+        <button class="btn secondary" id="backBtn">Back</button>
+        <div class="row" style="gap:8px">
+          <button class="btn ghost" id="helpBtn2">Immediate Help</button>
+          <button class="btn" id="submitBtn">See my results</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         RESULTS VIEW
+         Hidden until scoring is complete; shows score badge,
+         category insights, optional critical-condition note, and tips.
+    ============================================================ -->
+    <div class="card fade result" id="results">
+      <h2>Your check‑in results</h2>
+
+      <!-- Overall score line with colored badge inserted by JS -->
+      <p id="scoreLine" style="margin-top:-6px"></p>
+
+      <!-- Advice bullet list for the user's overall score range -->
+      <div id="rangeAdvice" style="margin:10px 0 14px"></div>
+
+      <!-- Top 4 categories by intensity -->
+      <h3 style="margin-bottom:6px">Category insights</h3>
+      <div id="categoryList" class="helpList" style="margin-bottom:12px"></div>
+
+      <!-- Critical-condition callout (only shown when triggered) -->
+      <div id="criticalBox"
+           style="display:none; border-left:6px solid var(--crit); background:mistyrose;
+                  padding:12px; border-radius:8px; margin:12px 0">
+        <strong>Note:</strong> Some answers suggest experiences that, in rare cases, can be related to
+        specific conditions. This is <em>not</em> a diagnosis — consider a professional evaluation.
+        <ul id="criticalConditions" style="margin:8px 0 0 18px"></ul>
+        <div class="row" style="margin-top:8px">
+          <button class="btn" id="helpBtn3">Get help now</button>
+        </div>
+      </div>
+
+      <!-- Merged tip list (range tips + category-specific quick actions) -->
+      <h3 style="margin:10px 0 6px">Helpful next steps</h3>
+      <ul id="tips"></ul>
+
+      <!-- Footer nav: Retake | Back to home -->
+      <div class="row" style="margin-top:10px; justify-content:space-between">
+        <button class="btn secondary" id="retakeBtn">Retake</button>
+        <button class="btn ghost"     id="backHomeBtn">Back to home</button>
+      </div>
+      <div class="foot">
+        Feedback isn't a diagnosis. If distress persists or worsens, consider contacting a licensed professional.
+      </div>
+    </div>
+
+  </div><!-- /.wrap -->
+
+
+  <!-- ============================================================
+       IMMEDIATE HELP MODAL
+       Rendered over the page. Helplines are injected by JS.
+       Closes on overlay click or the "Close" button.
+  ============================================================ -->
+  <div class="modal" id="helpModal" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+    <div class="box">
+      <h2 id="helpTitle" style="margin-top:0">You matter. Help is available now.</h2>
+      <p class="lead" style="margin-top:-6px">
+        If you feel unsafe, contact local emergency services or a crisis helpline.
+        These resources are examples — edit to match your region.
+      </p>
+      <!-- Helpline cards injected here by openHelp() -->
+      <div class="helpList" id="helpList"></div>
+      <div class="row" style="margin-top:12px; justify-content:space-between">
+        <button class="btn secondary" id="closeHelp">Close</button>
+        <!-- Primary call button: href is set dynamically to the first tel: link -->
+        <a class="btn" href="#tel" id="primaryCall" target="_self">Call</a>
+      </div>
+      <div class="foot">This app does not collect your answers or replace professional care.</div>
+    </div>
+  </div>
+
+
+  <script>
+    /* ============================================================
+       DATA: ANSWER OPTIONS
+       Each option has a display label and a numeric score value (0–4).
+    ============================================================ */
+    const ANSWER_OPTIONS = [
+      { label: 'Never',     value: 0 },
+      { label: 'Rarely',    value: 1 },
+      { label: 'Sometimes', value: 2 },
+      { label: 'Often',     value: 3 },
+      { label: 'Always',    value: 4 },
+    ];
+
+    /* ============================================================
+       DATA: HELPLINES
+       Customise these numbers to match the user's region.
+    ============================================================ */
+    const HELPLINES = [
+      {
+        name:   'Police / Ambulance / Fire',
+        detail: 'All-in-one emergency services (India)',
+        number: '112'
+      },
+      {
+        name:   'National Mental Health Helpline – KIRAN',
+        detail: '24/7 Rehabilitation-focused mental health aid, counseling, referrals',
+        number: '1800-599-0019'
+      },
+      {
+        name:   'National Tele Mental Health Programme (Tele-MANAS)',
+        detail: '24/7 phone-based mental health counseling, psychotherapy, referrals',
+        number: '14416'
+      },
+    ];
+
+    /* ============================================================
+       DATA: QUESTIONS
+       Each question belongs to a category used for scoring.
+       Categories map to CATEGORY_DESCRIPTIONS below.
+    ============================================================ */
+	const QUESTIONS = [
+	  /* --- Mood & Depression --- */
+	  { text: 'How often do you lose interest in things you usually enjoy?', cat: 'Depression' },
+	  { text: 'How often do you feel easily irritated or short-tempered?', cat: 'Stress' },
+	  { text: 'How often do you feel hurt by criticism or rejection?', cat: 'Anxiety' },
+	  { text: 'How often do you feel not good enough when comparing yourself to others?', cat: 'Self-esteem' },
+	  { text: 'Do you often look for approval from others to feel okay?', cat: 'Anxiety' },
+	  { text: 'How often do you push yourself to achieve more to prove your worth?', cat: 'Perfectionism' },
+
+	  /* --- Anxiety & Social --- */
+	  { text: 'Do you sometimes feel a sense of fear or uneasy without a clear reason?', cat: 'Anxiety' },
+	  { text: 'How often do daily tasks or responsibilities feel too overwhelming or unmanageable?', cat: 'Stress' },
+	  { text: 'Do social situations make you feel tired or want to avoid them?', cat: 'Social' },
+	  { text: 'Do you worry about being left or abandoned by people close to you?', cat: 'Attachment' },
+	  { text: 'How often do you feel jealous or competitive when others succeed?', cat: 'Social' },
+	  { text: 'How often do you worry about your appearance or flaws?', cat: 'Body image' },
+
+	  /* --- Emotional Awareness & Dissociation --- */
+	  { text: 'Do you find it hard to understand how others feel?', cat: 'Social' },
+	  { text: 'Do you find it difficult to understand or express your emotions?', cat: 'Emotional awareness' },
+	  { text: 'Do you ever feel disconnected from your surroundings or yourself?', cat: 'Dissociation' },
+	  { text: 'How often do you have thoughts or urges that are hard to control?', cat: 'OCD/Control' },
+	  { text: 'Do you feel a strong need to control or organize things?', cat: 'OCD/Control' },
+	  { text: 'How often do you depend on routines and feel uncomfortable with change?', cat: 'OCD/Control' },
+	  { text: 'Do you use daydreaming to escape from stress?', cat: 'Coping' },
+
+	  /* --- Energy, Mood & Perception --- */
+	  { text: 'How often do you feel tired even after resting?', cat: 'Energy' },
+	  { text: 'How often do you feel unusually energetic without a reason?', cat: 'Mood' },
+	  { text: 'Do you ever feel like others are watching or against you?', cat: 'Perception' },
+
+	  /* --- Critical / Triage Questions --- */
+	  { text: 'Do you sometimes feel life has no purpose or feel very hopeless?', cat: 'Depression' },
+	  { text: 'Do you sometimes find it hard to feel regret after hurting someone?', cat: 'Emotional awareness' },
+	  { text: 'Do you sometimes have thoughts about harming yourself or others?', cat: 'Crisis' },
+	];
+
+    /* ============================================================
+       DATA: CATEGORY DESCRIPTIONS
+       Short explanation + self-help hint shown in the results panel.
+    ============================================================ */
+    const CATEGORY_DESCRIPTIONS = {
+      'Depression':          'Low interest, low mood, heaviness. Try gentle activity, sunlight, and staying connected.',
+      'Stress':              'Feeling overwhelmed by tasks/responsibilities. Try short breaks, prioritizing 1–2 tasks.',
+      'Anxiety':             'Tension, fear, worry, sensitivity to rejection. Try breathing and grounding.',
+      'Self-esteem':         'Self-criticism and comparison. Practice self-compassion and realistic goals.',
+      'Perfectionism':       'Pressure to prove value. Try kinder self-talk and sustainable pacing.',
+      'Social':              'Fatigue or difficulty in social interactions. Try small, safe connections.',
+      'Attachment':          'Fear of being left out or abandoned. Reach out to trusted people.',
+      'Body image':          'Preoccupation with appearance or flaws. Consider limiting mirror checks; focus on function.',
+      'Emotional awareness': 'Numbness or difficulty expressing emotions. Try journaling and naming feelings.',
+      'Dissociation':        'Feeling disconnected from self/surroundings. Try grounding with the 5‑4‑3‑2‑1 method.',
+      'OCD/Control':         'Urges, rituals, strong need for control. Try delaying a ritual briefly and breathing.',
+      'Coping':              'Using imagination to escape. Balance with brief grounding breaks.',
+      'Energy':              'Fatigue despite rest. Gentle movement and consistent sleep can help.',
+      'Mood':                'Unusually elevated energy/cheerfulness. Track patterns and sleep regularly.',
+      'Perception':          'Feeling watched or targeted. Reduce stimulants; seek professional support if persistent.',
+      'Crisis':              'Thoughts of harm. Use Immediate Help resources now.'
+    };
+
+    /* ============================================================
+       DATA: SCORE RANGE ADVICE
+       Maps an overall percentage (0–100) to a severity label,
+       badge CSS class, and bullet-point tips shown in results.
+    ============================================================ */
+    const RANGE_ADVICE = [
+      { max: 20, label: 'Doing well',              class: 'good', tips: [
+        'Keep up the habits that help (sleep, movement, hydration).',
+        'Stay connected with people who make you feel safe.',
+        'Do one small enjoyable activity daily.'
+      ]},
+      { max: 40, label: 'Mild signs of stress/anxiety', class: 'mild', tips: [
+        'Try a 5‑minute breathing practice today.',
+        'Schedule short breaks between tasks.',
+        'Limit doomscrolling; create a calming evening routine.'
+      ]},
+      { max: 60, label: 'Moderate distress',       class: 'mod', tips: [
+        'Talk to someone you trust about how you feel.',
+        'Practice grounding (5 things you can see, 4 touch, 3 hear, 2 smell, 1 taste).',
+        'Reduce workload where possible for a few days.'
+      ]},
+      { max: 80, label: 'High emotional strain',   class: 'high', tips: [
+        'Consider speaking with a counselor/therapist.',
+        'Prioritize sleep and regular meals.',
+        'Avoid major decisions until you feel steadier.'
+      ]},
+      { max: 100, label: 'Critical concern',       class: 'crit', tips: [
+        'Reach out to a professional or a helpline today.',
+        'Keep a supportive person with you if possible.',
+        'Use the Immediate Help button for numbers in your area.'
+      ]},
+    ];
+
+    /* ============================================================
+       DATA: CRITICAL CONDITION RULES
+       Each rule checks a per-category average score.
+       If the threshold is met, the condition label is shown in
+       the critical-condition callout on the results screen.
+    ============================================================ */
+    const CRITICAL_CONDITION_RULES = [
+      { key: 'Crisis',      label: 'Suicidal or harmful thoughts',                             showIf: s => s['Crisis']      >= 3 },
+      { key: 'Perception',  label: 'Psychosis‑spectrum experiences (paranoia, feeling watched)', showIf: s => s['Perception']  >= 3 },
+      { key: 'Dissociation',label: 'Dissociative experiences (disconnection from self/world)',  showIf: s => s['Dissociation'] >= 3 },
+      { key: 'Mood',        label: 'Possible hypomanic symptoms (unusually high energy)',       showIf: s => s['Mood']        >= 3 },
+      { key: 'OCD/Control', label: 'Obsessive‑compulsive features (urges/rituals)',             showIf: s => s['OCD/Control'] >= 3 },
+      { key: 'Depression',  label: 'Major depressive features (low interest, hopelessness)',   showIf: s => s['Depression']  >= 6 },
+    ];
+
+    /* ============================================================
+       SECTION 1: DOM REFERENCES & VIEW NAVIGATION
+       Helper to get elements by id, and click handlers to switch
+       between the three main views (landing, quiz, results).
+    ============================================================ */
+    const el      = id => document.getElementById(id);
+    const landing = el('landing');
+    const quiz    = el('quiz');
+    const results = el('results');
+    const helpModal = el('helpModal');
+
+    /* Switch from landing → quiz */
+    el('startBtn').onclick    = () => { landing.style.display='none'; quiz.style.display='block'; scrollTo(0,0); };
+
+    /* Switch from results → quiz (retake) */
+    el('retakeBtn').onclick   = () => { results.style.display='none'; quiz.style.display='block'; scrollTo(0,0); };
+
+    /* Switch from results → landing */
+    el('backHomeBtn').onclick = () => { results.style.display='none'; landing.style.display='block'; scrollTo(0,0); };
+
+    /* All three "Immediate Help" buttons open the same modal */
+    ['helpBtn1','helpBtn2','helpBtn3'].forEach(id => el(id).onclick = () => openHelp());
+
+    /* Close the modal via button or by clicking the dark overlay */
+    el('closeHelp').onclick = () => helpModal.style.display = 'none';
+    helpModal.addEventListener('click', e => { if (e.target === helpModal) helpModal.style.display = 'none'; });
+
+
+    /* ============================================================
+       SECTION 2: RENDER QUESTIONS INTO THE DOM
+       Loops over QUESTIONS and creates a .q block for each,
+       containing a heading and a radio-button group.
+    ============================================================ */
+    const qWrap = el('questions');
+
+    QUESTIONS.forEach((q, i) => {
+      const qBox = document.createElement('div');
+      qBox.className = 'q';
+      const num = i + 1; // 1-based question number
+
+      qBox.innerHTML = `
+        <h3>${num}. ${q.text}</h3>
+        <div class="opts" role="radiogroup" aria-label="${q.text}">
+          ${ANSWER_OPTIONS.map(a => `
+            <label class="opt">
+              <input type="radio" name="q${num}" value="${a.value}" aria-checked="false" /> ${a.label}
+            </label>
+          `).join('')}
+        </div>
+      `;
+      qWrap.appendChild(qBox);
+    });
+
+    const totalQs = QUESTIONS.length;
+    const progBar  = el('progBar');
+    const progText = el('progText');
+
+    /* Update the progress bar and counter whenever any radio changes */
+    qWrap.addEventListener('change', () => {
+      const answered = document.querySelectorAll('.opts input:checked').length;
+      const pct = Math.round((answered / totalQs) * 100);
+      progBar.style.width  = pct + '%';
+      progText.textContent = `${answered}/${totalQs}`;
+    });
+
+
+    /* ============================================================
+       SECTION 3: SUBMIT HANDLER → SCORING → SHOW RESULTS
+       Validates all questions are answered, tallies scores per
+       category and overall, then delegates to showResults().
+    ============================================================ */
+    el('submitBtn').onclick = () => {
+      /* Collect all checked radio buttons */
+      const radios = [...document.querySelectorAll('.opts input:checked')];
+
+      /* Guard: all questions must be answered */
+      if (radios.length < totalQs) {
+        alert('Please answer all questions (you can choose "Never" if unsure).');
+        return;
+      }
+
+      /* Build scoring maps */
+      const answers   = radios.map(r => parseInt(r.value, 10));
+      const catScores = {}; // total score per category
+      const catCounts = {}; // number of questions per category
+      let total = 0;
+
+      answers.forEach((val, idx) => {
+        total += val;
+        const cat = QUESTIONS[idx].cat;
+        catScores[cat] = (catScores[cat] || 0) + val;
+        catCounts[cat] = (catCounts[cat] || 0) + 1;
+      });
+
+      /* Max possible = number of questions × 4 (always answer) */
+      const maxTotal = totalQs * 4;
+      showResults(total, maxTotal, catScores, catCounts);
+    };
+
+
+    /* ============================================================
+       FUNCTION: showResults(total, maxTotal, catScores, catCounts)
+       Hides the quiz, shows the results panel, and populates:
+         - Overall score badge
+         - Range-based advice bullets
+         - Top 4 category insight cards
+         - Optional critical-condition callout
+         - Merged tips list
+    ============================================================ */
+    function showResults(total, maxTotal, catScores, catCounts) {
+      quiz.style.display    = 'none';
+      results.style.display = 'block';
+
+      /* --- Overall score as a 0–100 percentage --- */
+      const pct   = Math.round((total / maxTotal) * 100);
+      const range = RANGE_ADVICE.find(r => pct <= r.max); // first range whose max >= pct
+
+      /* Inject score badge line */
+      el('scoreLine').innerHTML =
+        `Overall score: <span class="scoreBadge ${range.class}">${pct}/100 – ${range.label}</span>`;
+
+      /* Inject range-specific advice as an unordered list */
+      el('rangeAdvice').innerHTML = `<ul>${range.tips.map(t => `<li>${t}</li>`).join('')}</ul>`;
+
+      /* --- Category insights: sort by average, show top 4 --- */
+      const catList = Object.keys(catScores).map(k => ({
+        cat: k,
+        avg: +(catScores[k] / catCounts[k]).toFixed(2) // average per question in this category
+      })).sort((a, b) => b.avg - a.avg); // descending
+
+      const top = catList.slice(0, 4);
+
+      el('categoryList').innerHTML = top.map(item => {
+        const desc       = CATEGORY_DESCRIPTIONS[item.cat] || '';
+        /* Badge color: critical ≥3, high ≥2, moderate ≥1, good otherwise */
+        const badgeClass = item.avg >= 3 ? 'crit' : item.avg >= 2 ? 'high' : item.avg >= 1 ? 'mod' : 'good';
+        return `
+          <div class="helpItem">
+            <div style="display:flex; justify-content:space-between; align-items:center">
+              <strong>${item.cat}</strong>
+              <span class="scoreBadge ${badgeClass}">${item.avg.toFixed(1)} / 4</span>
+            </div>
+            <div style="margin-top:6px">${desc}</div>
+          </div>
+        `;
+      }).join('');
+
+      /* --- Critical condition callout --- */
+      /* Build a lookup of category → average score for rule evaluation */
+      const flags = {};
+      catList.forEach(item => flags[item.cat] = item.avg);
+
+      /* Evaluate each critical rule against the averaged category scores */
+      const criticalHits = CRITICAL_CONDITION_RULES.filter(rule => rule.showIf(flags));
+
+      const criticalBox = el('criticalBox');
+      if (pct >= 70 || criticalHits.length) {
+        /* Show the callout with matching condition labels, or a generic high-distress note */
+        criticalBox.style.display = 'block';
+        el('criticalConditions').innerHTML = criticalHits.length
+          ? criticalHits.map(c => `<li>${c.label}</li>`).join('')
+          : '<li>Overall distress appears high. Consider a professional evaluation.</li>';
+      } else {
+        criticalBox.style.display = 'none';
+      }
+
+      /* --- Tips: merge range tips + category-specific quick actions (deduplicated) --- */
+      const extra = top.map(i => quickTipFor(i.cat));
+      el('tips').innerHTML = [...new Set([...range.tips, ...extra])].map(t => `<li>${t}</li>`).join('');
+    }
+
+
+    /* ============================================================
+       FUNCTION: quickTipFor(category)
+       Returns a single concrete action for a given category.
+       Shown as additional bullets in the tips list.
+    ============================================================ */
+    function quickTipFor(cat) {
+      const table = {
+        'Anxiety':             'Try box breathing: in 4, hold 4, out 4, hold 4 — for 2 minutes.',
+        'Stress':              'Pick 1 task, set a 10‑minute timer, then rest briefly.',
+        'Depression':          'Step into daylight for 5–10 minutes and move gently.',
+        'Self-esteem':         'Write one thing you did adequately today — not perfectly, just adequately.',
+        'Perfectionism':       'Choose a task to do at 80% quality and ship it.',
+        'Social':              'Send a short "thinking of you" message to someone safe.',
+        'Attachment':          'Plan a brief check‑in with a trusted person this week.',
+        'Body image':          'List 3 ways your body helps you function (not appearance).',
+        'Emotional awareness': 'Name and write 3 feelings you noticed today.',
+        'Dissociation':        'Grounding: describe 5 things you can see around you.',
+        'OCD/Control':         'Delay a ritual by 1 minute while breathing slowly.',
+        'Coping':              'Alternate 2 minutes imagination, 1 minute grounding with senses.',
+        'Energy':              'Stick to a consistent wake time for 3 days.',
+        'Mood':                'Track sleep/wake times for the next 3 days.',
+        'Perception':          'Reduce caffeine for 48 hours and prioritize sleep.',
+        'Crisis':              'Use the Immediate Help button and stay with someone you trust.'
+      };
+      /* Fallback for any unmapped category */
+      return table[cat] || 'Take a short walk, hydrate, and rest your eyes for 2 minutes.';
+    }
+
+
+    /* ============================================================
+       SECTION 4: IMMEDIATE HELP MODAL
+       openHelp() injects helpline cards and sets the primary
+       "Call" button's href to the first tel: link available.
+    ============================================================ */
+    function openHelp() {
+      const list = el('helpList');
+
+      /* Render each helpline as a card */
+      list.innerHTML = HELPLINES.map(h => `
+        <div class="helpItem">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap">
+            <div>
+              <div><strong>${h.name}</strong></div>
+              <div class="foot">${h.detail}</div>
+            </div>
+            <div class="helpNumber">${h.number}</div>
+          </div>
+        </div>
+      `).join('');
+
+      /* Set the primary "Call" button to the first helpline that has a tel: href */
+      const primary = HELPLINES.find(h => h.tel && h.tel.startsWith('tel:'));
+      const callBtn = el('primaryCall');
+      if (primary) {
+        callBtn.href        = primary.tel;
+        callBtn.textContent = `Call ${primary.number}`;
+        callBtn.style.display = 'inline-block';
+      } else {
+        callBtn.style.display = 'none'; // Hide if no tel: link configured
+      }
+
+      helpModal.style.display = 'flex'; // Show the modal overlay
+    }
+
+
+    /* ============================================================
+       SECTION 5: MISC HELPERS
+       "Back" button on the quiz scrolls smoothly to the top so
+       users can review unanswered questions above the fold.
+    ============================================================ */
+    el('backBtn').onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  </script>
+</body>
+</html>
