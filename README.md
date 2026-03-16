@@ -250,16 +250,6 @@ If distress is persistent or severe, users are encouraged to consult a **license
 
 ---
 
-# 📁 Project Structure
-PsyLume
-│
-├── index.html
-├── README.md
-└── assets
-      └── psylume_preview.png
-
----
-
 # 🚀 Running the Application
 
 To run PsyLume locally:
