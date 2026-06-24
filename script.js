@@ -10,17 +10,20 @@ const HELPLINES = [
   {
     name:   'Police / Ambulance / Fire',
     detail: 'All-in-one emergency services (India)',
-    number: '112'
+    number: '112',
+    tel: 'tel:112'
   },
   {
     name:   'National Mental Health Helpline – KIRAN',
     detail: '24/7 Rehabilitation-focused mental health aid, counseling, referrals',
-    number: '1800-599-0019'
+    number: '1800-599-0019',
+    tel: 'tel:1800-599-0019'
   },
   {
     name:   'National Tele Mental Health Programme (Tele-MANAS)',
     detail: '24/7 phone-based mental health counseling, psychotherapy, referrals',
-    number: '14416'
+    number: '14416',
+    tel: 'tel:14416'
   },
 ];
 
@@ -288,17 +291,21 @@ function quickTipFor(cat) {
 function openHelp() {
   const list = el('helpList');
 
-  list.innerHTML = HELPLINES.map(h => `
-    <div class="helpItem">
-      <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap">
-        <div>
-          <div><strong>${h.name}</strong></div>
-          <div class="foot">${h.detail}</div>
-        </div>
-        <div class="helpNumber">${h.number}</div>
+list.innerHTML = HELPLINES.map(h => `
+  <div class="helpItem">
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap">
+      <div>
+        <div><strong>${h.name}</strong></div>
+        <div class="foot">${h.detail}</div>
       </div>
+
+      <a class="helpNumber" href="${h.tel}">
+        ${h.number}
+      </a>
+
     </div>
-  `).join('');
+  </div>
+`).join('');
 
   const primary = HELPLINES.find(h => h.tel && h.tel.startsWith('tel:'));
   const callBtn = el('primaryCall');
