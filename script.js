@@ -307,16 +307,6 @@ list.innerHTML = HELPLINES.map(h => `
   </div>
 `).join('');
 
-  const primary = HELPLINES.find(h => h.tel && h.tel.startsWith('tel:'));
-  const callBtn = el('primaryCall');
-  if (primary) {
-    callBtn.href        = primary.tel;
-    callBtn.textContent = `Call ${primary.number}`;
-    callBtn.style.display = 'inline-block';
-  } else {
-    callBtn.style.display = 'none'; // Hide if no tel: link configured
-  }
-
   helpModal.style.display = 'flex'; // Show the modal overlay
 }
 
