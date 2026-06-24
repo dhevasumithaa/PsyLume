@@ -177,6 +177,7 @@ QUESTIONS.forEach((q, i) => {
 });
 
 const totalQs = QUESTIONS.length;
+const maxTotal = totalQs * 4; 
 const progBar  = el('progBar');
 const progText = el('progText');
 
