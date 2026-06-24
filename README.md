@@ -1,4 +1,4 @@
-# 🌱 PsyLume
+# 💡 PsyLume
 ### *Illuminating Mental Wellbeing*
 
 PsyLume is a privacy-focused web application designed to help individuals perform a quick **mental health self-assessment** through structured psychological reflection questions.
