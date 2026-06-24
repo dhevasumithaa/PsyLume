@@ -300,7 +300,7 @@ list.innerHTML = HELPLINES.map(h => `
       </div>
 
       <a class="helpNumber" href="${h.tel}">
-        ${h.number}
+        <i class="fa fa-phone"></i>${h.number}
       </a>
 
     </div>
