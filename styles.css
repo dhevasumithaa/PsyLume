@@ -153,7 +153,20 @@ p.lead {
 
 .helpList  { display: grid; gap: 10px; }
 .helpItem  { padding: 12px; border: 1px solid lavender; border-radius: 12px; }
-.helpNumber{ font-weight: 700; }
+.helpNumber{
+    color:#2563eb;
+    text-decoration:none;
+    font-weight:600;
+    cursor:pointer;
+}
+
+.helpNumber:hover{
+    text-decoration:underline;
+}
+
+.helpNumber .fa{
+    margin-right:6px;
+}
 
 .foot {
   margin-top: 16px;
