@@ -19,7 +19,7 @@ Try the application here:
 
 # 📷 Application Preview
 
-![PsyLume Screenshot](assets/psylume_preview.png)
+![PsyLume Screenshot](assets/psylume_preview.png) 
 
 ---
 
